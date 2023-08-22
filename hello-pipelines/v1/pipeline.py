@@ -40,7 +40,7 @@ train_model_B_step = components.create_component_from_func(
 
 @dsl.pipeline(name="pipeline-test")
 def world_cup_pipeline():
-    ingest_and_process_task = ingest_data_step()
+    ingest_and_process_task = ingest_data_step().set_cpu_request('1').set_cpu_limit('1').set_memory_request('512Mi').set_memory_limit('512Mi')
     preprocess_data_task = preprocess_data_step(ingest_and_process_task.output)
     train_model_A_task = train_model_A_step(preprocess_data_task.output)
     train_model_B_task = train_model_B_step(preprocess_data_task.output)

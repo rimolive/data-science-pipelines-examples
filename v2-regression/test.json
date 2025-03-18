@@ -1,0 +1,139 @@
+{
+  "components": {
+    "comp-cpu-limit": {
+      "executorLabel": "exec-cpu-limit",
+      "outputDefinitions": {
+        "parameters": {
+          "Output": {
+            "parameterType": "STRING"
+          }
+        }
+      }
+    },
+    "comp-sum-numbers": {
+      "executorLabel": "exec-sum-numbers",
+      "inputDefinitions": {
+        "parameters": {
+          "a": {
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "b": {
+            "parameterType": "NUMBER_INTEGER"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "parameters": {
+          "Output": {
+            "parameterType": "NUMBER_INTEGER"
+          }
+        }
+      }
+    }
+  },
+  "deploymentSpec": {
+    "executors": {
+      "exec-cpu-limit": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "cpu_limit"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.12.1' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef cpu_limit() -> str:\n    return \"4000m\"\n\n"
+          ],
+          "image": "python:3.9"
+        }
+      },
+      "exec-sum-numbers": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "sum_numbers"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.12.1' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef sum_numbers(a: int, b: int) -> int:\n    return a + b\n\n"
+          ],
+          "image": "python:3.9",
+          "resources": {
+            "resourceCpuLimit": "{{$.inputs.parameters['pipelinechannel--cpu-limit-Output']}}"
+          }
+        }
+      }
+    }
+  },
+  "pipelineInfo": {
+    "name": "pipeline"
+  },
+  "root": {
+    "dag": {
+      "tasks": {
+        "cpu-limit": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-cpu-limit"
+          },
+          "taskInfo": {
+            "name": "cpu-limit"
+          }
+        },
+        "sum-numbers": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-sum-numbers"
+          },
+          "inputs": {
+            "parameters": {
+              "a": {
+                "runtimeValue": {
+                  "constant": 1.0
+                }
+              },
+              "b": {
+                "runtimeValue": {
+                  "constant": 2.0
+                }
+              },
+              "cpu_limit": {
+                "runtimeValue": {
+                  "constant": "{{$.inputs.parameters['pipelinechannel--cpu-limit-Output']}}"
+                }
+              },
+              "pipelinechannel--cpu-limit-Output": {
+                "taskOutputParameter": {
+                  "outputParameterKey": "Output",
+                  "producerTask": "cpu-limit"
+                }
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "sum-numbers"
+          }
+        }
+      }
+    }
+  },
+  "schemaVersion": "2.1.0",
+  "sdkVersion": "kfp-2.12.1"
+}
